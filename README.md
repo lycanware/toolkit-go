@@ -28,10 +28,10 @@ func main() {
 
 	if len(errorList) > 0 {
 		fmt.Println("Not all files were copied")
-        fmt.Println(errorList)
+		fmt.Println(errorList)
         
 	} else {
-        fmt.Println("Copy Complete")
+		fmt.Println("Copy Complete")
     }
 
 }
