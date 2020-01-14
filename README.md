@@ -7,7 +7,7 @@ go get -u github.com/lycanware/toolkit-go/filesys/copy
 ```
 
 ## Example
-First create a directory called `source_directory` and add some files in that directory to copy. Running the following program will
+First create a directory called `source_directory` and add some test files that will be copied. Running the following program will
 copy the directory and all files to a new directory called `destination_directory`
 ```go
 package main
