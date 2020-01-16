@@ -22,7 +22,7 @@ func main() {
 	var err error
 	var errorList []error
 
-	if errorList, err = copy.Dir("source_directory", "destination_directory"); err != nil {
+	if errorList, err = copy.Copy("source_directory", "destination_directory"); err != nil {
 		log.Fatal(err)
 	}
 
