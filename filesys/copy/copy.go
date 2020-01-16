@@ -7,57 +7,79 @@ import (
 	"path"
 )
 
-// Dir recursively copies a directory (src) and files to a new directory (dst).
-// An error is returned if the src doesn't exist or if there is a problem creating the dst.
-// Individual files that fail to copy are skipped over and provided in the errors array
-func Dir(src, dst string) ([]error, error) {
+// Copy a file or directory recursively.
+// Supports symlinks and maintains Permissions
+func Copy(src, dst string) error {
+	var inf os.FileInfo
 	var err error
-	var srcinf os.FileInfo
-	var directories []os.FileInfo
 
-	if srcinf, err = os.Stat(src); err != nil {
-		return []error{}, err
+	if inf, err = os.Lstat(src); err != nil {
+		return err
 	}
 
-	if err = os.MkdirAll(dst, srcinf.Mode()); err != nil {
-		return []error{}, err
-	}
-
-	if directories, err = ioutil.ReadDir(src); err != nil {
-		return []error{}, err
-	}
-
-	var failedList []error
-
-	for _, dirFile := range directories {
-		srcPath := path.Join(src, dirFile.Name())
-		dstPath := path.Join(dst, dirFile.Name())
-
-		if dirFile.IsDir() {
-			if errList, err := Dir(srcPath, dstPath); err != nil {
-				failedList = append(failedList, err)
-				for _, subErr := range errList {
-					failedList = append(failedList, subErr)
-				}
-			}
-
-		} else {
-			if err = File(srcPath, dstPath); err != nil {
-				failedList = append(failedList, err)
-			}
-		}
-
-	}
-
-	return failedList, nil
+	return copy(src, dst, inf)
 }
 
-// File copies a file (src) to a new location (dst) including permissions
-func File(src, dst string) error {
+// copy called recursively, checks the file mode and calls the appropriate function
+// Only call this function from copy.go, otherwise use the Copy() function
+func copy(src, dst string, inf os.FileInfo) error {
+	if inf.Mode()&os.ModeSymlink != 0 {
+		return symlink(src, dst)
+	}
+
+	if inf.IsDir() {
+		return dir(src, dst, inf)
+	}
+
+	return file(src, dst, inf)
+}
+
+// symlink copies the symlink destination of src and creates a new symlink (dst) pointing to the same location as src
+// ie. It copies the symlink, not files
+func symlink(src, dst string) error {
+	var err error
+	var symLinkTarget string
+
+	if symLinkTarget, err = os.Readlink(src); err != nil {
+		return err
+	}
+
+	return os.Symlink(symLinkTarget, dst)
+}
+
+// dir recursively copies a directory
+// This function should only be called as a result of calling the exported Copy() function
+func dir(src, dst string, inf os.FileInfo) error {
+	var err error
+	var directories []os.FileInfo
+
+	if err = os.MkdirAll(dst, 0755); err != nil {
+		return err
+	}
+	defer os.Chmod(dst, inf.Mode())
+
+	if directories, err = ioutil.ReadDir(src); err != nil {
+		return err
+	}
+
+	for _, dirItem := range directories {
+		srcPath := path.Join(src, dirItem.Name())
+		dstPath := path.Join(dst, dirItem.Name())
+
+		if err := copy(srcPath, dstPath, dirItem); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// file copies a file (src) to a new location (dst) including permissions
+// This function should only be called as a result of calling the exported Copy() function
+func file(src, dst string, inf os.FileInfo) error {
 	var err error
 	var srcFile *os.File
 	var newFile *os.File
-	var srcInf os.FileInfo
 
 	if srcFile, err = os.Open(src); err != nil {
 		return err
@@ -73,9 +95,5 @@ func File(src, dst string) error {
 		return err
 	}
 
-	if srcInf, err = os.Stat(src); err != nil {
-		return err
-	}
-
-	return os.Chmod(dst, srcInf.Mode())
+	return os.Chmod(dst, inf.Mode())
 }
