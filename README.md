@@ -19,21 +19,11 @@ import (
 )
 
 func main() {
-	var err error
-	var errorList []error
-
-	if errorList, err = copy.Copy("source_directory", "destination_directory"); err != nil {
+	if err := copy.Copy("source_directory", "destination_directory"); err != nil {
 		log.Fatal(err)
 	}
-
-	if len(errorList) > 0 {
-		fmt.Println("Not all files were copied")
-		fmt.Println(errorList)
-        
-	} else {
-		fmt.Println("Copy Complete")
-    }
-
+	
+	fmt.Println("Copy Complete")
 }
 ```
 
